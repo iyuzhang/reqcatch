@@ -1,0 +1,13 @@
+# Privacy policy
+
+Request Lens inspects requests only for website origins the user enables. It processes URLs, page context, HTTP methods, request/response headers and bodies when available, status codes, timing, network error information, and top-level JSON business codes.
+
+All processing and retained records stay in the browser extension's local storage. No developer-operated server receives data. There is no analytics, telemetry, advertising, sale of data, account login, cloud synchronization, or remote script loading. Requests to websites continue to be made by those websites normally.
+
+Captured traffic can contain passwords, authorization headers, cookies, tokens, personal data, and application content. Request Lens does not claim to redact these automatically. Copying or exporting records is an explicit user action; review them before sending them to another person or including them in an issue. Clipboard contents are managed by the operating system and may be accessible to other applications.
+
+The extension retains up to 100 errors across all enabled sites, subject to a total serialized-text limit of approximately two million characters. Individual request and response bodies are capped at 256 KiB. Oldest records are evicted. Clearing a website removes its retained records. Disabling a website prevents new captures; already-started requests may still complete. Uninstalling removes extension-managed storage subject to the browser's own data handling. Downloaded exports and clipboard history are not deleted by the extension.
+
+Firefox uses website access and webRequest permissions to read network traffic. Chrome uses debugger permission to inspect a monitored tab and shows a browser debugging notification. Both builds use tabs permission to identify the website, local storage to retain settings/errors, and clipboard-write permission for requested copy operations. The extension does not request clipboard-read permission.
+
+Use the repository's security reporting mechanism described in SECURITY.md for questions about the implementation. A public privacy-policy URL and publisher contact must be configured in the store listings before submission. This file describes the implementation and is not a claim that a store submission has been approved.

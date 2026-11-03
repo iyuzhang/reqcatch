@@ -1,0 +1,33 @@
+{
+  "name": "request-lens",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local network error inspection for Firefox and Chrome",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "lint": "eslint src scripts tests",
+    "check:privacy": "node scripts/check-privacy.mjs",
+    "package": "npm run build && node scripts/package.mjs",
+    "check": "npm run lint && npm test && npm run check:privacy && npm run package",
+    "test:e2e": "node tests/browser.integration.mjs"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.1",
+    "@playwright/test": "1.59.1",
+    "esbuild": "0.25.2",
+    "eslint": "9.39.1",
+    "fflate": "0.8.2",
+    "globals": "16.5.0",
+    "sharp": "0.34.5",
+    "web-ext": "9.4.0"
+  }
+}

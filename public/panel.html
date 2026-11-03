@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Request Lens</title>
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+  <header><h1>Request Lens <span id="count">0</span></h1><p id="site">正在读取当前网站…</p></header>
+  <nav>
+    <button id="toggle" disabled>启用此网站</button>
+    <button id="open">独立页面</button>
+    <button id="export">导出 JSON</button>
+    <button id="clear">清空</button>
+  </nav>
+  <p class="hint">HTTP 4xx/5xx、非零业务 code 和网络失败。启用后请刷新网站以捕获首屏请求。全部网站合计保留最近 100 条（总量上限约 4 MiB），单个请求体或响应体最多 256 KiB。</p>
+  <label><input type="checkbox" id="hide-cancelled">隐藏主动取消的请求</label>
+  <p id="feedback" role="status" aria-live="polite"></p>
+  <p id="adapter-status" role="status"></p>
+  <main id="records"></main>
+  <script src="panel.js"></script>
+</body>
+</html>

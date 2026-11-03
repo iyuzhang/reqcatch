@@ -1,0 +1,17 @@
+node_modules/
+dist/
+artifacts/
+test-results/
+playwright-report/
+*.xpi
+*.zip
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.har
+request-errors-*.json
+.DS_Store
+.idea/
+.vscode/
