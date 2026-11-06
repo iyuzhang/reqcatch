@@ -2,6 +2,7 @@ import { api as browser } from '../core/platform.js';
 import { getTransport } from '../core/records.js';
 import { createRecord } from './record-view.js';
 import { createRuleForm } from './rule-form.js';
+import { initializeLanguage, translate } from './i18n.js';
 
 const QUERY = new URLSearchParams(location.search);
 const RECORDS_NODE = document.getElementById('records');
@@ -16,6 +17,7 @@ let feedbackTimer;
 void initialize().catch(showError);
 
 async function initialize() {
+  initializeLanguage(() => render(true));
   if (QUERY.has('tabId')) {
     tabId = Number(QUERY.get('tabId'));
     document.body.classList.add('full');
@@ -91,7 +93,7 @@ function render(force = false) {
   const query = document.getElementById('search').value.trim().toLowerCase();
   const visible = state.records.filter(record => {
     if (hiddenCancelled && record.reasons.includes('请求已取消')) return false;
-    return !query || `${record.url} ${record.method} ${record.reasons.join(' ')} ${getTransport(record)}`.toLowerCase().includes(query);
+    return !query || `${record.url} ${record.method} ${record.reasons.join(' ')} ${translate(record.reasons.join(' '), document.documentElement.lang)} ${getTransport(record)}`.toLowerCase().includes(query);
   });
   document.getElementById('count').textContent = visible.length === state.records.length ? String(visible.length) : `${visible.length} / ${state.records.length}`;
   if (!visible.length) {

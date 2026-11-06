@@ -28,7 +28,7 @@ npm run check
 - Chrome：打开 `chrome://extensions`，开启「开发者模式」，选择「加载已解压的扩展程序」，加载 `dist/chrome`。
 - Firefox：打开 `about:debugging#/runtime/this-firefox`，选择「临时载入附加组件」，加载 `dist/firefox/manifest.json`。
 
-Firefox 临时扩展会在退出浏览器后移除；永久安装需要 Mozilla 签名。启用网站后刷新页面，可捕获首屏请求。当前扩展界面为中文。
+Firefox 临时扩展会在退出浏览器后移除；永久安装需要 Mozilla 签名。启用网站后刷新页面，可捕获首屏请求。在设置的「语言」中可选择跟随浏览器、简体中文或 English；默认跟随浏览器，中文环境使用简体中文，其他语言使用英文。手动选择自动保存在本地，弹窗与独立页面同步；切换语言不会更改原始请求、响应或导出内容。
 
 ## 监控设置
 

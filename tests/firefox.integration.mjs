@@ -99,6 +99,9 @@ async function runPanelTest(origin) {
   const check = (value, message) => { if (!value) throw new Error(message); };
   const state = () => browser.runtime.sendMessage({action:'state',tabId});
   try {
+    const language = document.getElementById('language');
+    language.value = 'zh-CN';
+    language.dispatchEvent(new Event('change'));
     await wait(() => !document.getElementById('toggle').disabled);
     document.getElementById('toggle').click();
     await wait(async () => (await state()).enabled);

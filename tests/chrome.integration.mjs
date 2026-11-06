@@ -29,7 +29,7 @@ FIXTURE.on('upgrade', (_request, socket) => socket.end('HTTP/1.1 503 Service Una
 await new Promise(resolve => FIXTURE.listen(0, '127.0.0.1', resolve));
 const ORIGIN = `http://127.0.0.1:${FIXTURE.address().port}`;
 const EXTENSION = fileURLToPath(new URL('../dist/chrome', import.meta.url));
-const context = await chromium.launchPersistentContext('', { channel: 'chromium', headless: true, args: [`--disable-extensions-except=${EXTENSION}`, `--load-extension=${EXTENSION}`] });
+const context = await chromium.launchPersistentContext('', { locale: 'zh-CN', channel: 'chromium', headless: true, args: [`--disable-extensions-except=${EXTENSION}`, `--load-extension=${EXTENSION}`] });
 context.setDefaultTimeout(15000);
 try {
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
@@ -89,6 +89,26 @@ try {
   await panel.waitForFunction(() => document.querySelectorAll('main > details.request-card').length === 3);
   const captured = await panel.evaluate(tabId => chrome.runtime.sendMessage({ action: 'state', tabId }), tabId);
   assert.equal(captured.records.length, 3);
+  const originalPayloads = await panel.locator('pre').allTextContents();
+  await panel.evaluate(() => {
+    const language = document.getElementById('language');
+    language.value = 'en';
+    language.dispatchEvent(new Event('change'));
+  });
+  await panel.getByRole('button', { name: 'Settings', exact: true }).waitFor();
+  await panel.waitForFunction(() => document.querySelector('.actions button').textContent === 'Copy request + response');
+  assert.deepEqual(await panel.locator('pre').allTextContents(), originalPayloads);
+  const mirror = await context.newPage();
+  await mirror.goto(`chrome-extension://${extensionId}/panel.html?tabId=${tabId}`);
+  await mirror.getByRole('button', { name: 'Settings', exact: true }).waitFor();
+  await panel.evaluate(() => {
+    const language = document.getElementById('language');
+    language.value = 'zh-CN';
+    language.dispatchEvent(new Event('change'));
+  });
+  await panel.getByRole('button', { name: '设置', exact: true }).waitFor();
+  await mirror.getByRole('button', { name: '设置', exact: true }).waitFor();
+  await mirror.close();
   const emptyResponse = captured.records.find(entry => entry.url.endsWith('/empty-error'));
   assert.equal(emptyResponse.responseBody, '');
   assert.equal(await panel.locator('.actions button').first().textContent(), '复制请求与响应');
@@ -185,7 +205,17 @@ try {
   await panel.getByText(`${ORIGIN} · 未启用`, { exact: true }).waitFor();
   await panel.getByRole('button', { name: '清空', exact: true }).click();
   await panel.waitForFunction(() => document.querySelectorAll('main > details.request-card').length === 0);
-  console.log('PASS Chrome: native capture, request/response bodies, HTTP/business filtering, copy, refresh, disable, clear');
+  await panel.locator('#language').selectOption('en');
+  await panel.getByRole('button', { name: 'Enable website', exact: true }).waitFor();
+  assert.equal(await panel.locator('html').getAttribute('lang'), 'en');
+  assert.equal(await panel.locator('#quick-xhr-only').locator('..').innerText(), 'XHR / Fetch only');
+  await panel.reload();
+  await panel.getByRole('button', { name: 'Enable website', exact: true }).waitFor();
+  await panel.getByRole('button', { name: 'Settings', exact: true }).click();
+  assert.equal(await panel.locator('#language').inputValue(), 'en');
+  await panel.locator('#language').selectOption('auto');
+  await panel.getByRole('button', { name: '启用此网站', exact: true }).waitFor();
+  console.log('PASS Chrome: capture, filters, copy, persistence, language switching and browser language');
 } finally {
   await context.close();
   FIXTURE.closeAllConnections();

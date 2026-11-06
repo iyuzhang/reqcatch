@@ -24,7 +24,7 @@ npm run test:e2e
 
 Load `dist/chrome` at `chrome://extensions` using **Developer mode → Load unpacked**. In Firefox, use `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on** → `dist/firefox/manifest.json`. Temporary Firefox installations are removed when Firefox exits; permanent installations need Mozilla signing.
 
-The current interface is in Chinese. English documentation describes the available controls: enable/disable website, independent viewer, JSON export, clear records, hide cancellations, and five copy actions on each expanded error.
+The interface supports Simplified Chinese and English. Under Settings → Language, choose Follow browser, 简体中文, or English. The default follows the browser: Chinese locales use Simplified Chinese; other locales use English. Manual choices are saved locally and synchronized between the popup and independent viewer. Language changes do not modify raw requests, responses, clipboard payloads, or exports.
 
 ### Website settings
 
