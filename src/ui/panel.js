@@ -1,5 +1,7 @@
 import { api as browser } from '../core/platform.js';
-import { formatRequest, formatResponse } from '../core/records.js';
+import { getTransport } from '../core/records.js';
+import { createRecord } from './record-view.js';
+import { createRuleForm } from './rule-form.js';
 
 const QUERY = new URLSearchParams(location.search);
 const RECORDS_NODE = document.getElementById('records');
@@ -8,6 +10,8 @@ let tabId;
 let state;
 let renderedKey = '';
 let refreshing = false;
+let ruleForm;
+let feedbackTimer;
 
 void initialize().catch(showError);
 
@@ -20,10 +24,23 @@ async function initialize() {
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
     tabId = tab?.id;
   }
+  ruleForm = createRuleForm(settings => update('settings', settings), showError, xhrOnly => update('settings', { ...state.settings, xhrOnly }));
+  document.getElementById('configure').addEventListener('click', () => {
+    const settings = document.getElementById('settings');
+    settings.open = !settings.open;
+  });
+  document.getElementById('search').addEventListener('input', () => render(true));
   document.getElementById('toggle').addEventListener('click', () => void update('toggle'));
   document.getElementById('clear').addEventListener('click', () => void update('clear'));
   document.getElementById('export').addEventListener('click', exportRecords);
-  document.getElementById('hide-cancelled').addEventListener('change', () => render(true));
+  const hideCancelled = document.getElementById('hide-cancelled');
+  const quickHideCancelled = document.getElementById('quick-hide-cancelled');
+  hideCancelled.checked = quickHideCancelled.checked = localStorage.getItem('hideCancelled') !== 'false';
+  for (const control of [hideCancelled, quickHideCancelled]) control.addEventListener('change', () => {
+    hideCancelled.checked = quickHideCancelled.checked = control.checked;
+    localStorage.setItem('hideCancelled', String(control.checked));
+    render(true);
+  });
   document.getElementById('open').addEventListener('click', () => {
     void browser.tabs.create({ url: browser.runtime.getURL(`panel.html?tabId=${tabId}`) });
   });
@@ -31,11 +48,12 @@ async function initialize() {
   setInterval(() => void refresh(), 1000);
 }
 
-async function update(action) {
+async function update(action, settings) {
   try {
-    state = await browser.runtime.sendMessage({ action, tabId });
+    state = await browser.runtime.sendMessage({ action, tabId, ...(settings ? { settings } : {}) });
+    if (state?.error) throw new Error(state.error);
     render(true);
-  } catch (error) { showError(error); }
+  } catch (error) { showError(error); if (action === 'settings') throw error; }
 }
 
 async function refresh() {
@@ -57,55 +75,36 @@ function render(force = false) {
   document.getElementById('site').textContent = `${state.origin} · ${state.enabled ? '监控中' : '未启用'}`;
   document.getElementById('toggle').disabled = false;
   document.getElementById('toggle').textContent = state.enabled ? '停用此网站' : '启用此网站';
-  document.getElementById('count').textContent = String(state.records.length);
+  const monitorState = document.getElementById('monitor-state');
+  monitorState.textContent = state.enabled ? '监控中' : '未启用';
+  monitorState.classList.toggle('active', state.enabled);
+  ruleForm.sync(state.settings, state.origin);
+  const scope = state.settings.xhrOnly ? '仅 XHR / Fetch' : '所有请求类型';
+  const businessRule = !state.settings.enabled ? '仅检查 HTTP 与网络异常' : state.settings.mode === 'auto' ? '业务异常自动识别' : `${state.settings.fieldPath} · 成功值 ${state.settings.successValues.map(value => JSON.stringify(value)).join(' / ')}`;
+  document.getElementById('rule-summary').textContent = `${scope} · ${businessRule}`;
   const key = `${state.origin}:${state.revision}`;
   if (!force && renderedKey === key) return;
   renderedKey = key;
-  const opened = new Set([...RECORDS_NODE.querySelectorAll('details[open]')].map(node => node.dataset.id));
+  const opened = new Set([...RECORDS_NODE.querySelectorAll('details[open][data-fold]')].map(node => node.dataset.fold));
   RECORDS_NODE.replaceChildren();
   const hiddenCancelled = document.getElementById('hide-cancelled').checked;
-  const visible = state.records.filter(record => !hiddenCancelled || !record.reasons.includes('请求已取消'));
+  const query = document.getElementById('search').value.trim().toLowerCase();
+  const visible = state.records.filter(record => {
+    if (hiddenCancelled && record.reasons.includes('请求已取消')) return false;
+    return !query || `${record.url} ${record.method} ${record.reasons.join(' ')} ${getTransport(record)}`.toLowerCase().includes(query);
+  });
+  document.getElementById('count').textContent = visible.length === state.records.length ? String(visible.length) : `${visible.length} / ${state.records.length}`;
   if (!visible.length) {
     const empty = document.createElement('p');
     empty.className = 'empty';
-    empty.textContent = state.enabled ? '暂无异常，正常操作网站即可。' : '启用此网站后开始监控。';
+    empty.textContent = state.records.length ? '没有匹配的请求，试试调整筛选条件。' : state.enabled ? '正在监控，暂无异常。启用后刷新网站即可捕获首屏请求。' : '启用此网站，开始检查网络请求。';
     RECORDS_NODE.append(empty);
   }
-  for (const record of [...visible].reverse()) RECORDS_NODE.append(createRecord(record, opened.has(record.id)));
-}
-
-function createRecord(record, opened) {
-  const details = document.createElement('details');
-  details.dataset.id = record.id;
-  details.open = opened;
-  const summary = document.createElement('summary');
-  const reason = document.createElement('strong');
-  reason.textContent = record.reasons.join(' / ');
-  summary.append(reason, document.createTextNode(` · ${record.method} · ${record.status === null ? '无 HTTP 响应' : `HTTP ${record.status}`} · code ${String(record.code)} · ${record.url}`));
-  const actions = document.createElement('div');
-  actions.className = 'actions';
-  for (const [label, value] of [
-    ['复制 URL', record.url], ['复制请求', formatRequest(record)],
-    ['复制响应', formatResponse(record)], ['复制全部', JSON.stringify(record, null, 2)],
-  ]) {
-    const button = document.createElement('button');
-    button.textContent = label;
-    button.addEventListener('click', () => void copy(value));
-    actions.append(button);
-  }
-  details.append(summary, actions);
-  for (const [title, text] of [['请求', formatRequest(record)], ['响应', formatResponse(record)], ['上下文', JSON.stringify({ time: record.time, page: record.page, durationMs: record.durationMs }, null, 2)]]) {
-    const heading = document.createElement('h2');
-    heading.textContent = title;
-    const pre = document.createElement('pre');
-    pre.textContent = text;
-    details.append(heading, pre);
-  }
-  return details;
+  for (const record of [...visible].reverse()) RECORDS_NODE.append(createRecord(record, opened, copy));
 }
 
 async function copy(text) {
-  try { await navigator.clipboard.writeText(text); FEEDBACK.textContent = '已复制到剪贴板'; }
+  try { await navigator.clipboard.writeText(text); showError('已复制到剪贴板'); }
   catch (error) { showError(`复制失败：${String(error)}`); }
 }
 
@@ -121,4 +120,6 @@ function exportRecords() {
 
 function showError(error) {
   FEEDBACK.textContent = String(error);
+  clearTimeout(feedbackTimer);
+  feedbackTimer = setTimeout(() => { FEEDBACK.textContent = ''; }, 5000);
 }

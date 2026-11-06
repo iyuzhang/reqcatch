@@ -4,4 +4,6 @@ This is an independent open-source browser extension. Keep examples generic and 
 
 Use `npm ci` and `npm run check`. Share classification, storage policy, and UI across adapters. Keep browser-specific network capture in `src/adapters`. Validate external messages and stored records with Zod. Render traffic as text. Keep extension code entirely local. Document permission and browser-coverage changes.
 
+Commit each completed change after relevant validation. Use the repository-local Git identity and verify the authenticated account before pushing.
+
 Do not upload or publish releases without the user's authorization. Do not store publisher credentials in the repository.

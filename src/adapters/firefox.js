@@ -1,8 +1,9 @@
 import { api as browser } from '../core/platform.js';
 import { createRuntime, getOrigin } from '../core/runtime.js';
-import { MAX_BODY_BYTES, classify, captureRequestBody } from '../core/records.js';
+import { shouldCaptureType } from '../core/rules.js';
+import { MAX_BODY_BYTES, classifyRecord, captureRequestBody, hasEmptyResponse, getTransport } from '../core/records.js';
 
-const FILTER = { urls: ['http://*/*', 'https://*/*'] };
+const FILTER = { urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] };
 const PENDING = new Map();
 const TABS = new Map();
 const runtime = createRuntime(browser, browser.browserAction);
@@ -24,9 +25,11 @@ function beforeRequest(details) {
   const page = TABS.get(details.tabId) || details.documentUrl || details.originUrl;
   const origin = getOrigin(page);
   if (!origin || !runtime.origins.has(origin)) return;
+  const rule = runtime.getRule(origin);
+  if (!shouldCaptureType(details.type, rule)) return;
   const body = captureRequestBody(details.requestBody);
   PENDING.set(details.requestId, {
-    id: `${details.requestId}-${details.timeStamp}`, origin, page,
+    id: `${details.requestId}-${details.timeStamp}`, origin, page, rule,
     tabId: details.tabId, url: details.url, method: details.method,
     type: details.type, started: details.timeStamp,
     time: new Date(details.timeStamp).toISOString(),
@@ -47,12 +50,21 @@ function receiveHeaders(details) {
   record.status = details.statusCode;
   record.statusLine = details.statusLine;
   record.responseHeaders = details.responseHeaders || [];
+  if (getTransport(record) === 'WebSocket') {
+    record.responseNote = 'WebSocket 握手信息，未采集消息帧';
+    return;
+  }
+  if (hasEmptyResponse(record)) {
+    record.responseBody = '';
+    return;
+  }
   const contentType = record.responseHeaders.find(header => header.name.toLowerCase() === 'content-type')?.value || '';
   if (!/json|text\/|xml|javascript/i.test(contentType) && details.type !== 'xmlhttprequest') {
     record.responseNote = '非文本响应，未采集响应体';
     return;
   }
   if (/event-stream/i.test(contentType)) {
+    if (!record.rule.sseEnabled) { PENDING.delete(details.requestId); return; }
     record.responseNote = '流式事件响应，未采集响应体';
     return;
   }
@@ -125,11 +137,7 @@ function redirectRequest(details) {
 function finalize(requestId, record) {
   if (PENDING.get(requestId) !== record) return;
   PENDING.delete(requestId);
-  let body;
-  if (!record.truncated && record.responseBody) {
-    try { body = JSON.parse(record.responseBody); } catch { /* Ignore non-JSON payloads. */ }
-  }
-  const result = classify(record.status, body, record.networkError);
+  const result = classifyRecord(record);
   if (!result.reasons.length) return;
   delete record.filtering;
   delete record.completed;

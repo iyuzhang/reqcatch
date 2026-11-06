@@ -49,3 +49,18 @@ test('runtime_validatesStoredRecordsAndPersistsExplicitOptIn', async () => {
   assert.equal(result.enabled, true);
   assert.deepEqual(value.persisted.origins, ['https://example.test']);
 });
+
+test('runtime_rulesPersistPerOriginAndInvalidUpdatesDoNotReplaceThem', async () => {
+  const value = fixture();
+  const settings = { mode: 'custom', httpEnabled: false, websocketEnabled: false, sseEnabled: false, xhrOnly: true, enabled: true, fieldPath: 'data.status', successValues: ['OK'] };
+  const saved = await value.send({ action: 'settings', tabId: 1, settings });
+  assert.deepEqual(saved.settings, settings);
+  assert.deepEqual(value.runtime.getRule('https://example.test'), settings);
+  assert.equal(value.runtime.getRule('https://other.test').fieldPath, 'code');
+  assert.equal(value.runtime.getRule('https://other.test').xhrOnly, true);
+  const restored = fixture(value.persisted);
+  await restored.runtime.ready;
+  assert.deepEqual((await restored.send({ action: 'state', tabId: 1 })).settings, settings);
+  assert.ok((await restored.send({ action: 'settings', tabId: 1, settings: { ...settings, successValues: [] } })).error);
+  assert.deepEqual(restored.runtime.getRule('https://example.test'), settings);
+});

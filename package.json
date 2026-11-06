@@ -1,5 +1,5 @@
 {
-  "name": "request-lens",
+  "name": "reqcatch",
   "version": "0.1.0",
   "private": true,
   "description": "Local network error inspection for Firefox and Chrome",

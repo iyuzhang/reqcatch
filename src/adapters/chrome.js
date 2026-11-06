@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { createRuntime, getOrigin } from '../core/runtime.js';
-import { MAX_BODY_BYTES, classify } from '../core/records.js';
+import { shouldCaptureType } from '../core/rules.js';
+import { MAX_BODY_BYTES, classifyRecord, hasEmptyResponse } from '../core/records.js';
 
 const API = globalThis.chrome;
 const ATTACHED = new Set();
@@ -16,6 +17,9 @@ const RESPONSE_SCHEMA = z.object({ requestId: z.string(), response: z.object({ s
 const FINISH_SCHEMA = z.object({ requestId: z.string(), timestamp: z.number() });
 const FAILURE_SCHEMA = FINISH_SCHEMA.extend({ errorText: z.string(), canceled: z.boolean().optional() });
 const BODY_SCHEMA = z.object({ body: z.string(), base64Encoded: z.boolean() });
+const SOCKET_CREATED_SCHEMA = z.object({ requestId: z.string(), url: z.string().url() });
+const SOCKET_HANDSHAKE_SCHEMA = z.object({ requestId: z.string(), response: z.object({ status: z.number(), statusText: z.string(), headers: HEADERS_SCHEMA }) });
+const SOCKET_ERROR_SCHEMA = z.object({ requestId: z.string(), errorMessage: z.string() });
 const runtime = createRuntime(API, API.action, toggle);
 
 API.debugger.onEvent.addListener((source, method, params) => {
@@ -88,16 +92,20 @@ async function detach(tabId) {
 
 async function onEvent(source, method, params) {
   if (!source.tabId || source.sessionId || !ATTACHED.has(source.tabId)) return;
+  if (method.startsWith('Network.webSocket')) return onWebSocketEvent(source, method, params);
   const key = `${source.tabId}:${params?.requestId}`;
   if (method === 'Network.requestWillBeSent') {
+    PENDING.delete(key);
     const parsed = REQUEST_SCHEMA.safeParse(params);
     if (!parsed.success) return;
     const tab = await API.tabs.get(source.tabId);
     const origin = getOrigin(tab.url);
     if (!runtime.origins.has(origin) || !getOrigin(parsed.data.request.url)) return;
+    const rule = runtime.getRule(origin);
+    if (!shouldCaptureType(parsed.data.type, rule)) return;
     const { request, timestamp, wallTime } = parsed.data;
     PENDING.set(key, {
-      id: `${key}:${wallTime}`, origin, page: tab.url, tabId: tab.id, url: request.url, method: request.method,
+      id: `${key}:${wallTime}`, origin, page: tab.url, tabId: tab.id, url: request.url, method: request.method, rule, type: parsed.data.type,
       started: timestamp, time: new Date(wallTime * 1000).toISOString(), status: null, statusLine: '',
       requestHeaders: headers(request.headers), requestBody: (request.postData || '').slice(0, MAX_BODY_BYTES),
       requestNote: request.hasPostData && !request.postData ? '浏览器未提供请求体（文件或流式数据）' : '',
@@ -112,6 +120,8 @@ async function onEvent(source, method, params) {
     if (!parsed.success) return;
     const response = parsed.data.response;
     Object.assign(record, { status: response.status, statusLine: `${response.status} ${response.statusText}`, responseHeaders: headers(response.headers), mimeType: response.mimeType });
+    if (/event-stream/i.test(response.mimeType) && !record.rule.sseEnabled) { PENDING.delete(key); return; }
+    if (hasEmptyResponse(record)) record.responseBody = '';
   } else if (method === 'Network.loadingFailed') {
     const parsed = FAILURE_SCHEMA.safeParse(params);
     if (!parsed.success) return;
@@ -121,7 +131,9 @@ async function onEvent(source, method, params) {
     const parsed = FINISH_SCHEMA.safeParse(params);
     if (!parsed.success) return;
     try {
-      if (/json|text|xml|javascript/i.test(record.mimeType || '')) {
+      if (hasEmptyResponse(record)) record.responseBody = '';
+      else if (/event-stream/i.test(record.mimeType || '')) record.responseNote = 'SSE 流式连接，未采集事件内容';
+      else if (/json|text|xml|javascript/i.test(record.mimeType || '')) {
         const result = BODY_SCHEMA.parse(await API.debugger.sendCommand(source, 'Network.getResponseBody', { requestId: parsed.data.requestId }));
         const text = result.base64Encoded ? new TextDecoder().decode(Uint8Array.from(atob(result.body), char => char.charCodeAt(0))) : result.body;
         record.truncated = new TextEncoder().encode(text).byteLength > MAX_BODY_BYTES;
@@ -133,14 +145,48 @@ async function onEvent(source, method, params) {
   }
 }
 
+async function onWebSocketEvent(source, method, params) {
+  if (method === 'Network.webSocketCreated') {
+    const parsed = SOCKET_CREATED_SCHEMA.safeParse(params);
+    if (!parsed.success || !/^wss?:/.test(parsed.data.url)) return;
+    const tab = await API.tabs.get(source.tabId);
+    const origin = getOrigin(tab.url);
+    const rule = runtime.getRule(origin);
+    if (!runtime.origins.has(origin) || !shouldCaptureType('WebSocket', rule)) return;
+    const started = Date.now() / 1000;
+    const key = `${source.tabId}:${parsed.data.requestId}`;
+    PENDING.set(key, {
+      id: `${key}:${started}`, origin, page: tab.url, tabId: tab.id, url: parsed.data.url, method: 'GET', rule, type: 'WebSocket',
+      started, time: new Date(started * 1000).toISOString(), status: null, statusLine: '',
+      requestHeaders: [], requestBody: '', requestNote: '', responseHeaders: [], responseBody: null,
+      responseNote: 'WebSocket 握手与连接信息，未采集消息帧', networkError: '',
+    });
+    return;
+  }
+  const key = `${source.tabId}:${params?.requestId}`;
+  const record = PENDING.get(key);
+  if (!record) return;
+  if (method === 'Network.webSocketWillSendHandshakeRequest') {
+    const parsed = z.object({ request: z.object({ headers: HEADERS_SCHEMA }) }).safeParse(params);
+    if (parsed.success) record.requestHeaders = headers(parsed.data.request.headers);
+  } else if (method === 'Network.webSocketHandshakeResponseReceived') {
+    const parsed = SOCKET_HANDSHAKE_SCHEMA.safeParse(params);
+    if (!parsed.success) return;
+    const response = parsed.data.response;
+    Object.assign(record, { status: response.status, statusLine: `${response.status} ${response.statusText}`, responseHeaders: headers(response.headers) });
+    if (record.status >= 400) finish(key, record, Date.now() / 1000);
+  } else if (method === 'Network.webSocketFrameError') {
+    const parsed = SOCKET_ERROR_SCHEMA.safeParse(params);
+    if (!parsed.success) return;
+    record.networkError = parsed.data.errorMessage;
+    finish(key, record, Date.now() / 1000);
+  } else if (method === 'Network.webSocketClosed') PENDING.delete(key);
+}
+
 function finish(key, record, timestamp) {
   if (PENDING.get(key) !== record) return;
   PENDING.delete(key);
-  let body;
-  if (!record.truncated && record.responseBody) {
-    try { body = JSON.parse(record.responseBody); } catch { /* Ignore non-JSON payloads. */ }
-  }
-  const result = classify(record.status, body, record.networkError);
+  const result = classifyRecord(record);
   if (result.reasons.length) runtime.add({ ...record, ...result, durationMs: Math.round((timestamp - record.started) * 1000) });
 }
 
