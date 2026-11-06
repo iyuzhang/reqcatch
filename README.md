@@ -18,6 +18,10 @@
 
 ## 本地安装
 
+普通 Chrome 用户无需安装开发工具：在 [GitHub Releases](https://github.com/iyuzhang/reqcatch/releases) 下载 `reqcatch-chrome-版本号.zip`，解压后打开 `chrome://extensions`，开启「开发者模式」，选择「加载已解压的扩展程序」并选中包含 `manifest.json` 的解压目录。保留该目录，更新时下载新版并重新加载。Firefox 商店版正在准备提交，未签名 ZIP 不能作为普通永久安装包。
+
+以下步骤用于从源码构建。
+
 需要 Node.js 22 或更高版本及 npm。
 
 ```sh

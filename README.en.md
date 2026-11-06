@@ -8,6 +8,8 @@ ReqCatch runs locally. It has no backend, analytics, account system, telemetry, 
 
 ## Development
 
+Chrome users can download `reqcatch-chrome-VERSION.zip` from [GitHub Releases](https://github.com/iyuzhang/reqcatch/releases), extract it, open `chrome://extensions`, enable Developer mode, and choose Load unpacked with the extracted directory containing `manifest.json`. Keep that directory; download a newer archive and reload to update. No development tools are needed for this installation. Firefox store submission is being prepared; an unsigned ZIP is not a permanent installation package.
+
 Requires Node.js 22 or later and npm.
 
 ```sh

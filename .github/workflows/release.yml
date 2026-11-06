@@ -1,0 +1,26 @@
+name: Release downloads
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npx web-ext lint --source-dir dist/firefox --warnings-as-errors
+      - name: Publish Chrome download and review sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          VERSION=$(node -p 'require("./package.json").version')
+          test "$RELEASE_TAG" = "v$VERSION"
+          gh release create "$RELEASE_TAG" "artifacts/reqcatch-chrome-$VERSION.zip" "artifacts/reqcatch-source-$VERSION.zip" --verify-tag --title "ReqCatch $RELEASE_TAG" --notes "Chrome: download the Chrome ZIP, extract it, open chrome://extensions, enable Developer mode, then select Load unpacked and choose the extracted folder. Firefox is distributed through Mozilla Add-ons after signing; the source ZIP is for review and rebuilding."
