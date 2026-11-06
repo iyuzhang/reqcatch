@@ -31,6 +31,13 @@ async function initialize() {
     const settings = document.getElementById('settings');
     settings.open = !settings.open;
   });
+  document.getElementById('settings').addEventListener('toggle', () => {
+    document.getElementById('configure').setAttribute('aria-expanded', String(document.getElementById('settings').open));
+  });
+  document.getElementById('close-settings').addEventListener('click', () => {
+    document.getElementById('settings').open = false;
+    document.getElementById('configure').focus();
+  });
   document.getElementById('search').addEventListener('input', () => render(true));
   document.getElementById('toggle').addEventListener('click', () => void update('toggle'));
   document.getElementById('clear').addEventListener('click', () => void update('clear'));

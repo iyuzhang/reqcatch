@@ -14,18 +14,23 @@
   <nav>
     <button id="toggle" disabled>启用此网站</button>
     <button id="open">独立页面</button>
-    <button id="configure">设置</button>
+    <button id="configure" aria-expanded="false" aria-controls="settings">设置</button>
     <button id="export">导出 JSON</button>
     <button id="clear">清空</button>
   </nav>
   <details id="settings">
-    <summary>此网站的设置</summary>
-    <div class="form-row"><label for="language">语言</label><select id="language"><option value="auto">跟随浏览器</option><option value="zh-CN">简体中文</option><option value="en">English</option></select></div>
+    <summary><span>此网站的设置</span><span class="settings-collapse">收起设置</span></summary>
+    <div class="settings-language"><div class="form-row"><label for="language">语言</label><select id="language"><option value="auto">跟随浏览器</option><option value="zh-CN">简体中文</option><option value="en">English</option></select></div></div>
     <form id="rule-form">
+      <fieldset class="settings-group"><legend>请求范围与显示</legend><div class="settings-options">
       <label title="仅隐藏列表中的主动取消记录，不影响采集和导出；自动保存。"><input type="checkbox" id="hide-cancelled" checked>隐藏主动取消</label>
       <label title="仅采集浏览器标记为 XHR / Fetch 的请求，跳过脚本、图片等其他类型；自动保存，对新请求生效，已有记录保留。"><input type="checkbox" id="xhr-only" checked>仅监控 XHR / Fetch</label>
-      <div class="filters"><label><input type="checkbox" id="http-enabled">记录 HTTP 异常状态码（4xx / 5xx）</label><label><input type="checkbox" id="websocket-enabled">监控 WebSocket</label><label><input type="checkbox" id="sse-enabled">监控 SSE</label></div>
+      </div></fieldset>
+      <fieldset class="settings-group"><legend>额外监控</legend>
+      <div class="settings-options"><label><input type="checkbox" id="http-enabled">记录 HTTP 异常状态码（4xx / 5xx）</label><label><input type="checkbox" id="websocket-enabled">监控 WebSocket</label><label><input type="checkbox" id="sse-enabled">监控 SSE</label></div>
       <p class="form-hint">以上三项默认关闭。HTTP 开关只控制状态码检查，普通请求的网络失败和业务异常仍会记录。WebSocket 检查握手异常（Chrome 还支持连接错误），SSE 检查连接异常，不解析消息内容。仅 XHR / Fetch 范围会排除 WebSocket 和浏览器单独标识的 EventSource。</p>
+      </fieldset>
+      <fieldset class="settings-group"><legend>业务异常识别</legend>
       <label><input type="checkbox" id="business-enabled" checked>检查 JSON 业务状态</label>
       <div class="form-row"><label for="business-mode">识别方式</label><select id="business-mode"><option value="auto">自动识别（推荐）</option><option value="custom">自定义字段与成功值</option></select></div>
       <p id="auto-rule-hint" class="form-hint">内置 code（0 / 200）、errcode / errno（0）、success / succeeded / ok、status / statusCode、GraphQL / JSON:API errors 和常见错误对象识别。仅检查顶层明确标记，含义不明的值跳过；多个标记冲突时优先记录失败。特殊业务码请使用自定义规则。</p>
@@ -34,7 +39,8 @@
       <div class="form-row"><label for="success-values">成功值</label><input id="success-values" value='[0,"0"]' placeholder='例如 [200,"OK",true]' autocomplete="off" required></div>
       <p class="form-hint">字段支持点分路径，例如 data.status。成功值填写 JSON 数组，数字与字符串分别判断。字段不存在时跳过业务检查；HTTP 和流式连接异常由对应开关控制。保存后对新请求生效。</p>
       </div>
-      <div class="form-actions"><button type="submit" class="primary-copy">保存规则</button><button type="button" id="reset-rule">恢复默认</button></div>
+      </fieldset>
+      <div class="form-actions"><button type="submit" class="primary-copy">保存规则</button><button type="button" id="reset-rule">恢复默认</button><button type="button" id="close-settings">收起设置</button></div>
     </form>
   </details>
   <div class="overview"><h2>异常请求</h2><span id="count">0</span><span id="rule-summary"></span></div>

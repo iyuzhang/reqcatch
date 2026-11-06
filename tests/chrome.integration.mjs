@@ -57,6 +57,16 @@ try {
   assert.equal(defaults.settings.mode, 'auto');
   for (const field of ['httpEnabled', 'websocketEnabled', 'sseEnabled']) assert.equal(defaults.settings[field], false);
   await panel.getByRole('button', { name: '设置', exact: true }).click();
+  await panel.waitForFunction(() => document.getElementById('configure').getAttribute('aria-expanded') === 'true');
+  await mkdir('test-results', { recursive: true });
+  await panel.emulateMedia({ colorScheme: 'light' });
+  await panel.screenshot({ path: 'test-results/settings-light.png', fullPage: true });
+  await panel.emulateMedia({ colorScheme: 'dark' });
+  await panel.screenshot({ path: 'test-results/settings-dark.png', fullPage: true });
+  await panel.locator('#close-settings').click();
+  await panel.waitForFunction(() => document.getElementById('configure').getAttribute('aria-expanded') === 'false');
+  assert.equal(await panel.locator('#settings').isVisible(), false);
+  await panel.getByRole('button', { name: '设置', exact: true }).click();
   assert.equal(await panel.locator('#quick-xhr-only').isChecked(), true);
   await panel.locator('#quick-xhr-only').uncheck();
   assert.equal(await panel.locator('#quick-hide-cancelled').isChecked(), true);

@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 const LANGUAGE_SCHEMA = z.enum(['auto', 'zh-CN', 'en']);
 const TEXT = new Map(Object.entries({
+  '收起设置': 'Close settings', '请求范围与显示': 'Request scope and display',
+  '额外监控': 'Additional monitoring', '业务异常识别': 'Business error detection',
   '请求捕手 — API 异常监控': 'ReqCatch — API Error Monitor',
   '请求捕手': 'ReqCatch', 'ReqCatch · API 异常监控': 'API Error Monitor',
   '正在读取当前网站…': 'Loading current website…', '未启用': 'Disabled', '监控中': 'Monitoring',
