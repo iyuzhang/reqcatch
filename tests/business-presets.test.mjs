@@ -61,9 +61,11 @@ test('classify_customRulesOverridePresetsAndLegacySettingsKeepTheirMeaning', () 
   assert.equal(DEFAULT_RULE.mode, 'auto');
 });
 
-test('classify_transportSwitchesDefaultOffAndRemainIndependent', () => {
-  assert.deepEqual(classify(502, null).reasons, []);
-  assert.deepEqual(classify(502, null, '', { ...DEFAULT_RULE, httpEnabled: true }).reasons, ['HTTP 异常']);
+test('classify_httpDefaultsOnAndTransportSwitchesRemainIndependent', () => {
+  assert.equal(RULE_SCHEMA.parse({ enabled: true, fieldPath: 'code', successValues: [0] }).httpEnabled, true);
+  assert.equal(RULE_SCHEMA.parse({ ...DEFAULT_RULE, httpEnabled: false }).httpEnabled, false);
+  assert.deepEqual(classify(502, null).reasons, ['HTTP 异常']);
+  assert.deepEqual(classify(502, null, '', { ...DEFAULT_RULE, httpEnabled: false }).reasons, []);
   assert.deepEqual(classify(200, { success: false }).reasons, ['业务状态异常']);
   assert.deepEqual(classify(null, null, 'Connection reset').reasons, ['网络失败']);
   for (const [type, url, headers, setting] of [
@@ -78,6 +80,6 @@ test('classify_transportSwitchesDefaultOffAndRemainIndependent', () => {
   assert.equal(shouldCaptureType('EventSource'), false);
   assert.equal(shouldCaptureType('WebSocket', { ...DEFAULT_RULE, websocketEnabled: true, xhrOnly: false }), true);
   assert.equal(shouldCaptureType('WebSocket', { ...DEFAULT_RULE, websocketEnabled: true, xhrOnly: true }), false);
-  assert.deepEqual(classifyRecord({ type: 'EventSource', status: 503, rule: { ...DEFAULT_RULE, sseEnabled: true } }).reasons, ['SSE 连接失败']);
-  assert.deepEqual(classifyRecord({ type: 'WebSocket', status: 503, rule: { ...DEFAULT_RULE, websocketEnabled: true } }).reasons, ['WebSocket 握手失败']);
+  assert.deepEqual(classifyRecord({ type: 'EventSource', status: 503, rule: { ...DEFAULT_RULE, httpEnabled: false, sseEnabled: true } }).reasons, ['SSE 连接失败']);
+  assert.deepEqual(classifyRecord({ type: 'WebSocket', status: 503, rule: { ...DEFAULT_RULE, httpEnabled: false, websocketEnabled: true } }).reasons, ['WebSocket 握手失败']);
 });

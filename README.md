@@ -10,15 +10,17 @@
 
 - 默认仅监控 XHR / Fetch，跳过脚本、样式、图片等其他请求类型。
 - 自动识别业务异常，也可自定义状态字段及成功值。
-- HTTP 异常状态码、WebSocket 与 SSE 监控独立配置，默认全部关闭。
+- HTTP 异常状态码、WebSocket 与 SSE 监控独立配置；HTTP 异常状态码默认开启，WebSocket 与 SSE 默认关闭。
 - 普通请求的网络失败和主动取消仍会记录；主动取消默认在列表中隐藏。
 - 主界面提供「仅监控 XHR / Fetch」「隐藏主动取消」快捷选项，与设置同步并自动保存，悬停可查看说明。
 - 请求体、响应体、请求头及上下文分别折叠，支持搜索及浅色、深色主题。
 - 支持复制 URL、请求、响应和完整记录，以及导出 JSON。首个复制按钮合并请求方法、URL、请求体及响应，不包含请求头和响应头。
 
-## 本地安装
+## 安装
 
-普通 Chrome 用户无需安装开发工具：在 [GitHub Releases](https://github.com/iyuzhang/reqcatch/releases) 下载 `reqcatch-chrome-版本号.zip`，解压后打开 `chrome://extensions`，开启「开发者模式」，选择「加载已解压的扩展程序」并选中包含 `manifest.json` 的解压目录。保留该目录，更新时下载新版并重新加载。Firefox 商店版正在准备提交，未签名 ZIP 不能作为普通永久安装包。
+Firefox：从 [Firefox 扩展商店](https://addons.mozilla.org/zh-CN/firefox/addon/reqcatch-api-monitor/)安装请求捕手，后续版本由 Firefox 自动更新。
+
+普通 Chrome 用户无需安装开发工具：在 [GitHub Releases](https://github.com/iyuzhang/reqcatch/releases) 下载 `reqcatch-chrome-版本号.zip`，解压后打开 `chrome://extensions`，开启「开发者模式」，选择「加载已解压的扩展程序」并选中包含 `manifest.json` 的解压目录。保留该目录，更新时下载新版并重新加载。
 
 以下步骤用于从源码构建。
 
@@ -42,7 +44,7 @@ Firefox 临时扩展会在退出浏览器后移除；永久安装需要 Mozilla 
 
 「隐藏主动取消」默认开启，只影响列表显示，不影响采集与导出。该显示偏好自动保存。
 
-「记录 HTTP 异常状态码（4xx / 5xx）」只控制实际 HTTP 状态检查，不控制响应体中的业务字段。例如 HTTP 200 且 `success: false` 仍属于业务异常。
+「记录 HTTP 异常状态码（4xx / 5xx）」默认开启，只控制实际 HTTP 状态检查，不控制响应体中的业务字段。例如 HTTP 200 且 `success: false` 仍属于业务异常。
 
 WebSocket 与 SSE 的监控开关独立于通用 HTTP 状态开关。关闭某种流式连接监控后，不记录该连接的异常；开启后记录可识别的握手或连接异常，不解析消息内容。
 

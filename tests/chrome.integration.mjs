@@ -51,11 +51,12 @@ try {
       socket.onerror = resolve;
     });
   });
-  await panel.waitForFunction(() => document.querySelectorAll('main > details.request-card').length === 1);
+  await panel.waitForFunction(() => document.querySelectorAll('main > details.request-card').length === 2);
   const defaults = await panel.evaluate(tabId => chrome.runtime.sendMessage({ action: 'state', tabId }), tabId);
   assert.equal(defaults.records[0].businessField, 'success');
   assert.equal(defaults.settings.mode, 'auto');
-  for (const field of ['httpEnabled', 'websocketEnabled', 'sseEnabled']) assert.equal(defaults.settings[field], false);
+  assert.equal(defaults.settings.httpEnabled, true);
+  for (const field of ['websocketEnabled', 'sseEnabled']) assert.equal(defaults.settings[field], false);
   await panel.getByRole('button', { name: '设置', exact: true }).click();
   await panel.waitForFunction(() => document.getElementById('configure').getAttribute('aria-expanded') === 'true');
   await mkdir('test-results', { recursive: true });
@@ -81,7 +82,7 @@ try {
     const socket = new WebSocket(location.origin.replace('http', 'ws') + '/socket-error');
     socket.onerror = resolve;
   }));
-  await panel.waitForFunction(() => document.querySelectorAll('main > details.request-card').length === 2);
+  await panel.waitForFunction(() => document.querySelectorAll('main > details.request-card').length === 3);
   const sockets = await panel.evaluate(tabId => chrome.runtime.sendMessage({ action: 'state', tabId }), tabId);
   assert.equal(sockets.records.at(-1).type, 'WebSocket');
   await panel.getByRole('button', { name: '清空', exact: true }).click();

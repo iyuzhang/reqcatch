@@ -108,10 +108,10 @@ async function runPanelTest(origin) {
     await wait(async () => (await browser.tabs.get(tabId)).status === 'complete');
     await browser.tabs.executeScript(tabId, { code: "document.getElementById('defaults').click()" });
     await wait(async () => (await browser.tabs.executeScript(tabId, { code: "document.getElementById('defaults-result').textContent" }))[0] === 'done');
-    await wait(async () => (await state()).records.length === 1);
+    await wait(async () => (await state()).records.length === 2);
     check((await state()).records[0].businessField === 'success', 'Automatic detection failed');
     const defaults = (await state()).settings;
-    check(defaults.mode === 'auto' && !defaults.httpEnabled && !defaults.sseEnabled && !defaults.websocketEnabled, 'Incorrect defaults');
+    check(defaults.mode === 'auto' && defaults.httpEnabled && !defaults.sseEnabled && !defaults.websocketEnabled, 'Incorrect defaults');
     document.getElementById('settings').open = true;
     check(document.getElementById('xhr-only').checked, 'XHR-only must default on');
     document.getElementById('xhr-only').checked = false;
@@ -122,7 +122,7 @@ async function runPanelTest(origin) {
     document.getElementById('rule-form').requestSubmit();
     await wait(async () => (await state()).settings.websocketEnabled === true);
     await browser.tabs.executeScript(tabId, { code: "document.getElementById('socket').click()" });
-    await wait(async () => (await state()).records.length === 2);
+    await wait(async () => (await state()).records.length === 3);
     check((await state()).records.at(-1).type === 'websocket', 'WebSocket handshake missing');
     document.getElementById('clear').click();
     await wait(async () => (await state()).records.length === 0);

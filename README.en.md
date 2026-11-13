@@ -2,13 +2,15 @@
 
 [中文](README.md) | English
 
-**ReqCatch — API Error Monitor**, an independent open-source extension for Firefox and Chrome. Automatically detect common JSON business errors without configuring field paths. HTTP 4xx/5xx checks, WebSocket monitoring, and SSE monitoring have separate per-site switches, all off by default. Ordinary request network failures and cancellations remain visible.
+**ReqCatch — API Error Monitor**, an independent open-source extension for Firefox and Chrome. Automatically detect common JSON business errors without configuring field paths. HTTP 4xx/5xx checks, WebSocket monitoring, and SSE monitoring have separate per-site switches. HTTP checks default to on; WebSocket and SSE monitoring default to off. Ordinary request network failures and cancellations remain visible.
 
 ReqCatch runs locally. It has no backend, analytics, account system, telemetry, or remote executable code. Enable a website explicitly, inspect its errors, and copy a URL, request, response, or complete record. The first copy action combines the method, URL, request body, and response content while omitting request and response headers.
 
-## Development
+## Installation and development
 
-Chrome users can download `reqcatch-chrome-VERSION.zip` from [GitHub Releases](https://github.com/iyuzhang/reqcatch/releases), extract it, open `chrome://extensions`, enable Developer mode, and choose Load unpacked with the extracted directory containing `manifest.json`. Keep that directory; download a newer archive and reload to update. No development tools are needed for this installation. Firefox store submission is being prepared; an unsigned ZIP is not a permanent installation package.
+Firefox users can install ReqCatch from [Firefox Add-ons](https://addons.mozilla.org/zh-CN/firefox/addon/reqcatch-api-monitor/). Firefox automatically updates the extension when new versions are available.
+
+Chrome users can download `reqcatch-chrome-VERSION.zip` from [GitHub Releases](https://github.com/iyuzhang/reqcatch/releases), extract it, open `chrome://extensions`, enable Developer mode, and choose Load unpacked with the extracted directory containing `manifest.json`. Keep that directory; download a newer archive and reload to update. No development tools are needed for this installation.
 
 Requires Node.js 22 or later and npm.
 
@@ -32,7 +34,7 @@ The interface supports Simplified Chinese and English. Under Settings → Langua
 
 Enable **XHR / Fetch only** under **Settings** to skip scripts, stylesheets, images, documents, and other request types before capturing bodies or storing errors. This setting is saved per origin and applies to new requests; existing records remain. It defaults to on for new websites; explicitly saved preferences are preserved. Filtering uses browser resource types, not URL extensions: resources loaded via Fetch/XHR still qualify, while native EventSource connections are excluded when identified separately by the browser.
 
-Use **Settings** to enable **Record HTTP errors (4xx / 5xx)**, **Monitor WebSocket**, and **Monitor SSE** independently. The HTTP switch controls actual HTTP status checks, not JSON business-status fields: HTTP 200 with `success: false` is still a business failure. Disabling a stream switch excludes that transport even when its HTTP status is an error. XHR/Fetch-only scope takes precedence over WebSocket and separately identified EventSource requests. Settings apply to newly started requests; existing records remain.
+Use **Settings** to configure **Record HTTP errors (4xx / 5xx)**, **Monitor WebSocket**, and **Monitor SSE** independently. HTTP checks default to on; WebSocket and SSE monitoring default to off. Explicitly saved preferences are preserved. The HTTP switch controls actual HTTP status checks, not JSON business-status fields: HTTP 200 with `success: false` is still a business failure. Disabling a stream switch excludes that transport even when its HTTP status is an error. XHR/Fetch-only scope takes precedence over WebSocket and separately identified EventSource requests. Settings apply to newly started requests; existing records remain.
 
 Business checks default to **Automatic detection (recommended)**. Built-in response patterns are shared by both browsers:
 
